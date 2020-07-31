@@ -7,3 +7,38 @@
 html, body {
     margin: 0px;
 }
+
+.main-layout {
+    margin: 0 auto;
+}
+
+.list-row {
+    display: inline-flex;
+    width: 100%;
+}
+
+.list-cell-name {
+    margin-left: 10px;
+    display: inline;
+    line-height: 50px;
+    width: 20%;
+}
+
+.list-cell-adress {
+    margin-left: 10px;
+    display: inline;
+    line-height: 50px;
+    width: 45%;
+}
+
+.list-cell-phone {
+    margin-left: 10px;
+    display: inline;
+    line-height: 50px;
+}
+
+.list-action {
+    display: inline;
+    margin-left: auto;
+    margin-right: 0;
+}

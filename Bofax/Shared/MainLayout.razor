@@ -1,5 +1,20 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="main">
-    @Body
-</div>
+<MatAppBarContainer>
+    <MatAppBar Fixed="true">
+        <MatAppBarRow>
+            <MatAppBarSection>
+                <MatIconButton Icon="cloud_queue"></MatIconButton>
+            </MatAppBarSection>
+            <MatAppBarSection Align="@MatAppBarSectionAlign.End">
+                <MatIconButton Link="https://github.com/PClasson/Bofax"><i class="fab fa-github"></i></MatIconButton>
+            </MatAppBarSection>
+        </MatAppBarRow>
+    </MatAppBar>
+ 
+    <MatAppBarContent>
+        <div class="mat-layout-grid">
+            @Body
+        </div>
+    </MatAppBarContent>
+</MatAppBarContainer>

@@ -1,0 +1,29 @@
+@page "/Invoice/{CustomerId}"
+@inject IIndexedDbFactory DbFactory
+
+<div class="main-layout">
+    <div class="mat-layout-grid-inner">
+        <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8">
+            @if(Customer != null) 
+            {
+                <p>@Customer.Name</p>
+                <p>@Customer.Adress, @Customer.ZipCode @Customer.City</p>
+                <p>@Customer.Phone</p>
+            }
+        </div>
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public string CustomerId { get; set; }
+    public Customer Customer { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var db = await DbFactory.Create<BofaxDb>();
+        var customerId = Convert.ToInt64(CustomerId);
+        Customer = db.Customers.Single(c => c.Id == customerId);
+    }
+}

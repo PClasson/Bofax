@@ -1,5 +1,126 @@
 ﻿@page "/"
+@inject IIndexedDbFactory DbFactory
+@inject IMatToaster Toaster
+@inject NavigationManager Url
 
-<h1>Hello, world!</h1>
+<div class="main-layout">
+    <div class="mat-layout-grid-inner">
+        <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8">
+            @if(customers != null) {
+                <MatList>
+                    @foreach(var customer in customers)
+                    {
+                        <Animate Animation="Animations.SlideRight" Duration="TimeSpan.FromSeconds(0.5)">
+                            <MatListItem Href="@Url.ToAbsoluteUri("Invoice/" + @customer.Id).AbsoluteUri">
+                                <div class="list-row">
+                                    <div class="list-cell-name">
+                                        @customer.Name
+                                    </div>
+                                    <div class="list-cell-adress">
+                                        @customer.Adress, @customer.ZipCode @customer.City
+                                    </div>
+                                    <div class="list-cell-phone">
+                                        @customer.Phone
+                                    </div>
+                                    <div class="list-action">
+                                        <MatIconButton Icon="edit"></MatIconButton>
+                                    </div>
+                                </div>
+                            </MatListItem>
+                            <MatDivider></MatDivider>
+                        </Animate>
+                    }
+                    <MatListItem>
+                        <MatButton Icon="add" OnClick="@OpenDialog" Label="Add customer"></MatButton>
+                    </MatListItem>
+                </MatList>
+            }
+        </div>
+    </div>
+</div>
 
-Welcome to your new app.
+<MatDialog @bind-IsOpen="@dialogIsOpen">
+    <MatDialogTitle>Add customer</MatDialogTitle>
+    <MatDialogContent>
+            <p>
+                <MatTextField @bind-Value="@customerName" Label="Name"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@customerAdress" Label="Adress"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@customerZipCode" Label="Zip Code"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@customerCity" Label="City"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@customerPhone" Label="Phone"></MatTextField>
+            </p>           
+    </MatDialogContent>
+    <MatDialogActions>
+        <MatButton OnClick="@(e => { dialogIsOpen = false; })">Cancel</MatButton>
+        <MatButton OnClick="@OkClick">Add customer</MatButton>
+    </MatDialogActions>
+</MatDialog>
+
+@code {
+    List<Customer> customers;
+
+    //Form binds
+    string customerName;
+    string customerAdress;
+    string customerZipCode;
+    string customerCity;
+    string customerPhone;
+    bool dialogIsOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var db = await DbFactory.Create<BofaxDb>();
+        customers = db.Customers.ToList();
+    }
+
+    void OpenDialog()
+    {
+        customerName = null;
+        customerAdress = null;
+        customerZipCode = null;
+        customerCity = null;
+        customerPhone = null;
+
+        dialogIsOpen = true;
+    }
+
+    void OkClick()
+    {
+        AddCustomer();
+        dialogIsOpen = false;
+    }
+
+    async void AddCustomer()
+    {
+        var customer = new Customer()
+        {
+            Name = customerName,
+            Adress = customerAdress,
+            ZipCode = customerZipCode,
+            City = customerCity,
+            Phone = customerPhone
+        };
+
+        try
+        {
+            using var db = await DbFactory.Create<BofaxDb>();
+            db.Customers.Add(customer);
+            await db.SaveChanges();
+            customers.Add(customer);
+            Toaster.Add("Customer added!", MatToastType.Success);
+        }
+        catch (Exception ex)
+        {
+            Toaster.Add("Error adding customer!", MatToastType.Danger, ex.Message);
+            Console.WriteLine("Exception caught in AddCustomer");
+        }
+    }
+}
