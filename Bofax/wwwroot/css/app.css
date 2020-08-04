@@ -17,28 +17,38 @@ html, body {
     width: 100%;
 }
 
-.list-cell-name {
-    margin-left: 10px;
+.list-cell {
     display: inline;
+    margin-left: 10px;
     line-height: 50px;
+}
+
+.list-cell-name {
     width: 20%;
 }
 
 .list-cell-adress {
-    margin-left: 10px;
-    display: inline;
-    line-height: 50px;
     width: 45%;
 }
 
-.list-cell-phone {
-    margin-left: 10px;
-    display: inline;
-    line-height: 50px;
+.list-cell-amount {
+    text-align: left;
+    width: 20%;
+}
+
+.list-cell-description {
+    text-align: left;
+    width: 40%;
+}
+
+.list-cell-unitprice {
+    text-align: left;
+    width: 20%;
 }
 
 .list-action {
     display: inline;
     margin-left: auto;
     margin-right: 0;
+    width: 10%;
 }

@@ -3,64 +3,65 @@
 @inject IMatToaster Toaster
 @inject NavigationManager Url
 
-<div class="main-layout">
-    <div class="mat-layout-grid-inner">
-        <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8">
-            @if(customers != null) {
-                <MatList>
-                    @foreach(var customer in customers)
-                    {
-                        <Animate Animation="Animations.SlideRight" Duration="TimeSpan.FromSeconds(0.5)">
+<Animate Animation="Animations.SlideRight" Duration="TimeSpan.FromSeconds(0.5)">
+    <div class="main-layout">
+        <div class="mat-layout-grid-inner">
+            <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8">
+                @if(customers != null) {
+                    <MatList>
+                        @foreach(var customer in customers)
+                        {
                             <MatListItem Href="@Url.ToAbsoluteUri("Invoice/" + @customer.Id).AbsoluteUri">
                                 <div class="list-row">
-                                    <div class="list-cell-name">
+                                    <div class="list-cell list-cell-name">
                                         @customer.Name
                                     </div>
-                                    <div class="list-cell-adress">
+                                    <div class="list-cell list-cell-adress">
                                         @customer.Adress, @customer.ZipCode @customer.City
                                     </div>
-                                    <div class="list-cell-phone">
+                                    <div class="list-cell">
                                         @customer.Phone
                                     </div>
-                                    <div class="list-action">
-                                        <MatIconButton Icon="edit"></MatIconButton>
+                                    <div class="list-cell list-action">
+                                        <MatIconButton Href="https://www.google.se/" Icon="edit"></MatIconButton>
                                     </div>
                                 </div>
                             </MatListItem>
                             <MatDivider></MatDivider>
-                        </Animate>
-                    }
-                    <MatListItem>
-                        <MatButton Icon="add" OnClick="@OpenDialog" Label="Add customer"></MatButton>
-                    </MatListItem>
-                </MatList>
-            }
+                        }
+                        <MatListItem>
+                            <MatButton Icon="add" OnClick="@OpenDialog" Label="Lägg till kund"></MatButton>
+                        </MatListItem>
+                    </MatList>
+                }
+            </div>
         </div>
     </div>
-</div>
+</Animate>
+
 
 <MatDialog @bind-IsOpen="@dialogIsOpen">
-    <MatDialogTitle>Add customer</MatDialogTitle>
+    <MatDialogTitle>Lägg till kund</MatDialogTitle>
     <MatDialogContent>
             <p>
-                <MatTextField @bind-Value="@customerName" Label="Name"></MatTextField>
+                <MatTextField @bind-Value="@customerName" Label="Namn"></MatTextField>
             </p>
             <p>
-                <MatTextField @bind-Value="@customerAdress" Label="Adress"></MatTextField>
+                <MatTextField @bind-Value="@customerAdress" Label="Address"></MatTextField>
             </p>
             <p>
-                <MatTextField @bind-Value="@customerZipCode" Label="Zip Code"></MatTextField>
+                <MatTextField @bind-Value="@customerZipCode" Label="Postnummer"></MatTextField>
             </p>
             <p>
-                <MatTextField @bind-Value="@customerCity" Label="City"></MatTextField>
+                <MatTextField @bind-Value="@customerCity" Label="Stad"></MatTextField>
             </p>
             <p>
-                <MatTextField @bind-Value="@customerPhone" Label="Phone"></MatTextField>
+                <MatTextField @bind-Value="@customerPhone" Label="Telefonnummer"></MatTextField>
             </p>           
     </MatDialogContent>
     <MatDialogActions>
-        <MatButton OnClick="@(e => { dialogIsOpen = false; })">Cancel</MatButton>
-        <MatButton OnClick="@OkClick">Add customer</MatButton>
+        <MatButton OnClick="@(e => { dialogIsOpen = false; })">Avbryt</MatButton>
+        <MatButton OnClick="@OkClick">Lägg till kund</MatButton>
     </MatDialogActions>
 </MatDialog>
 
@@ -114,12 +115,12 @@
             using var db = await DbFactory.Create<BofaxDb>();
             db.Customers.Add(customer);
             await db.SaveChanges();
-            customers.Add(customer);
-            Toaster.Add("Customer added!", MatToastType.Success);
+            customers = db.Customers.ToList();
+            Toaster.Add("Kund tillagd!", MatToastType.Success);
         }
         catch (Exception ex)
         {
-            Toaster.Add("Error adding customer!", MatToastType.Danger, ex.Message);
+            Toaster.Add("Fel inträffade när kund skulle läggas till!", MatToastType.Danger, ex.Message);
             Console.WriteLine("Exception caught in AddCustomer");
         }
     }
