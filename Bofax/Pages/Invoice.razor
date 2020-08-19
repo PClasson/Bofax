@@ -1,27 +1,30 @@
 @page "/Invoice/{CustomerId}"
 @inject IIndexedDbFactory DbFactory
 @inject IMatToaster Toaster
+@inject NavigationManager navMgr
+@inject PrintSettings PrintSettings
 
 <Animate Animation="Animations.SlideRight" Duration="TimeSpan.FromSeconds(0.5)">
     <div class="main-layout">
         <div class="mat-layout-grid-inner">
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-6">
-                @if(Customer != null) 
+                @if(_customer != null) 
                 {
-                    <p>@Customer.Name</p>
-                    <p>@Customer.Adress, @Customer.ZipCode @Customer.City</p>
-                    <p>@Customer.Phone</p>
+                    <p>@_customer.Name</p>
+                    <p>@_customer.Adress, @_customer.ZipCode @_customer.City</p>
+                    <p>@_customer.Phone</p>
+                    <p><MatButton OnClick="@RenderPDF" Label="Skapa Faktura"></MatButton></p>
                 }
             </div>
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-6">
                 <p>
-                    <MatSelectItem @bind-Value="@InvoiceMonth" Items="@Months" Label="Fakturamånad"></MatSelectItem>
+                    <MatSelectItem @bind-Value="@_invoiceMonth" Items="@_months" Label="Fakturamånad"></MatSelectItem>
                 </p>
                 <p>
-                    <MatDatePicker Format="yyyy-MM-dd" Label="Fakturadatum" @bind-Value="@InvoiceDate"></MatDatePicker>
+                    <MatDatePicker Format="yyyy-MM-dd" Label="Fakturadatum" @bind-Value="@_invoiceDate"></MatDatePicker>
                 </p>
                 <p>
-                    <MatDatePicker Format="yyyy-MM-dd" Label="Förfallodatum" @bind-Value="@ExpirationDate"></MatDatePicker>
+                    <MatDatePicker Format="yyyy-MM-dd" Label="Förfallodatum" @bind-Value="@_expirationDate"></MatDatePicker>
                 </p>
             </div>
 
@@ -43,8 +46,8 @@
                         </div>
                     </MatListGroupSubHeader>
                     <MatListDivider></MatListDivider>
-                    @if(invoiceRows != null) {
-                        @foreach(var invoiceRow in invoiceRows) 
+                    @if(_invoiceRows != null) {
+                        @foreach(var invoiceRow in _invoiceRows) 
                         {
                             <MatListItem>
                                 <div class="list-row">
@@ -68,13 +71,13 @@
                     <MatListItem>
                         <div class="list-row">
                             <div class="list-cell list-cell-amount">
-                                <MatTextField @bind-Value="@InvoiceRowAmount" Label="Antal" FullWidth="true"></MatTextField>
+                                <MatTextField @bind-Value="@_invoiceRowAmount" Label="Antal" FullWidth="true"></MatTextField>
                             </div>
                             <div class="list-cell list-cell-description">
-                                <MatTextField @bind-Value="@InvoiceRowDescription" Label="Beskrivning" FullWidth="true"></MatTextField>
+                                <MatTextField @bind-Value="@_invoiceRowDescription" Label="Beskrivning" FullWidth="true"></MatTextField>
                             </div>
                             <div class="list-cell list-cell-unitprice">
-                                <MatTextField @bind-Value="@InvoiceRowUnitPrice" Label="À Pris" FullWidth="true"></MatTextField>
+                                <MatTextField @bind-Value="@_invoiceRowUnitPrice" Label="À Pris" FullWidth="true"></MatTextField>
                             </div>
                             <div class="list-cell list-action">
                                 <MatIconButton OnClick="@AddInvoiceRow" Icon="add"></MatIconButton>
@@ -87,29 +90,44 @@
     </div>
 </Animate>
 
+<MatDialog @bind-IsOpen="@_dialogIsOpen">
+    <MatDialogTitle>Faktura</MatDialogTitle>
+    <MatDialogContent>
+        <p>
+            Rendered PDF
+        </p>
+    </MatDialogContent>
+    <MatDialogActions>
+        <MatButton OnClick="@(e => { _dialogIsOpen = false; })">Avbryt</MatButton>
+        <MatButton>Spara PDF</MatButton>
+    </MatDialogActions>
+</MatDialog>
+
+
 @code {
     [Parameter]
     public string CustomerId { get; set; }
 
-    Customer Customer;
-    Month InvoiceMonth = 0;
-    DateTime? InvoiceDate = DateTime.Today;
-    DateTime? ExpirationDate = DateTime.Now.AddDays(-10);
-    List<InvoiceRow> invoiceRows;
+    bool _dialogIsOpen = false;
 
-    string InvoiceRowAmount;
-    string InvoiceRowDescription;
-    string InvoiceRowUnitPrice;
+    Customer _customer;
+    Month _invoiceMonth = 0;
+    DateTime? _invoiceDate = DateTime.Today;
+    DateTime? _expirationDate = DateTime.Now.AddDays(-10);
+    List<InvoiceRow> _invoiceRows;
 
-    Month[] Months = Enum.GetValues(typeof(Month)).Cast<Month>().ToArray();
+    string _invoiceRowAmount;
+    string _invoiceRowDescription;
+    string _invoiceRowUnitPrice;
+
+    Month[] _months = Enum.GetValues(typeof(Month)).Cast<Month>().ToArray();
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("Invoice component init");
         using var db = await DbFactory.Create<BofaxDb>();
         var customerId = Convert.ToInt64(CustomerId);
-        Customer = db.Customers.Single(c => c.Id == customerId);
-        invoiceRows = db.InvoiceRows.Where(ir => ir.CustomerId == Customer.Id).ToList();
+        _customer = db.Customers.Single(c => c.Id == customerId);
+        _invoiceRows = await GetInvoiceRowsForCustomer(_customer.Id);
         SetDates();
     }
 
@@ -122,32 +140,39 @@
                                 DateTime.DaysInMonth(year, month));
 
         if (DateTime.DaysInMonth(year, month) > 30)
-            ExpirationDate = createDate.AddDays(-1);
+            _expirationDate = createDate.AddDays(-1);
         else
-            ExpirationDate = createDate;
+            _expirationDate = createDate;
 
         if (DateTime.Today.Month < 12)
         {
-            InvoiceMonth = (Month)DateTime.Today.Month;
+            _invoiceMonth = (Month)DateTime.Today.Month;
         }
+    }
+
+    async Task<List<InvoiceRow>> GetInvoiceRowsForCustomer(int customerId)
+    {
+        using var db = await DbFactory.Create<BofaxDb>();
+        var ir = db.InvoiceRows.Where(x => x.CustomerId == customerId).ToList();
+        return ir;
     }
 
     void AddInvoiceRow()
     {
         CreateAndAddInvoiceRow();
-        InvoiceRowAmount = null;
-        InvoiceRowDescription = null;
-        InvoiceRowUnitPrice = null;
+        _invoiceRowAmount = null;
+        _invoiceRowDescription = null;
+        _invoiceRowUnitPrice = null;
     }
 
     async void CreateAndAddInvoiceRow()
     {
         var invoiceRow = new InvoiceRow()
         {
-            CustomerId = Customer.Id,
-            Amount = Convert.ToDecimal(InvoiceRowAmount),
-            Description = InvoiceRowDescription,
-            UnitPrice = Convert.ToDecimal(InvoiceRowUnitPrice)
+            CustomerId = _customer.Id,
+            Amount = Convert.ToDecimal(_invoiceRowAmount),
+            Description = _invoiceRowDescription,
+            UnitPrice = Convert.ToDecimal(_invoiceRowUnitPrice)
         };
 
         try
@@ -155,8 +180,9 @@
             using var db = await DbFactory.Create<BofaxDb>();
             db.InvoiceRows.Add(invoiceRow);
             await db.SaveChanges();
-            invoiceRows = db.InvoiceRows.ToList();
+            _invoiceRows = await GetInvoiceRowsForCustomer(_customer.Id);
             Toaster.Add("Fakturarad tillagd!", MatToastType.Success);
+            this.StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -172,13 +198,66 @@
             using var db = await DbFactory.Create<BofaxDb>();
             db.InvoiceRows.Remove(invoiceRow);
             await db.SaveChanges();
-            invoiceRows = db.InvoiceRows.ToList();
+            _invoiceRows = await GetInvoiceRowsForCustomer(_customer.Id);
             Toaster.Add("Fakturarad borttagen!", MatToastType.Success);
+            this.StateHasChanged();
         }
         catch (Exception ex)
         {
             Toaster.Add("Fel inträffade när fakturarad skulle tas bort!", MatToastType.Danger, ex.Message);
             Console.WriteLine("Exception caught in DeleteInvoiceRow");
         }
+    }
+
+    void RenderPDF()
+    {
+        Console.WriteLine("Rendering PDF");
+        var sum = CalculateSum(_invoiceRows);
+
+        var invoiceModel = new InvoiceModel
+        {
+            Customer = _customer,
+            Month = _invoiceMonth.ToString(),
+            CreateDate = _invoiceDate.ToString(),
+            DueDate = _expirationDate.ToString(),
+            Rows = ConvertToInvoiceRowModel(_invoiceRows),
+            Sum = sum,
+            AmountToPay = sum
+        };
+
+        PrintSettings.Model = invoiceModel;
+
+        Console.WriteLine("Navigating!");
+        navMgr.NavigateTo($"/Print");
+    }
+
+    List<InvoiceRowModel> ConvertToInvoiceRowModel(List<InvoiceRow> invoiceRows)
+    {
+        var convertedRows = new List<InvoiceRowModel>();
+
+        invoiceRows.ForEach(invoiceRow =>
+        {
+            convertedRows.Add(new InvoiceRowModel
+            {
+                Quantity = invoiceRow.Quantity,
+                Description = invoiceRow.Description,
+                UnitPrice = invoiceRow.UnitPrice,
+                Amount = invoiceRow.Amount
+            });
+        });
+
+        return convertedRows;
+    }
+
+    decimal CalculateSum(List<InvoiceRow> invoiceRows)
+    {
+        decimal sum = 0;
+
+        invoiceRows.ForEach(invoiceRow =>
+        {
+            sum += invoiceRow.CalculatedPrice;
+        });
+
+        return sum;
     }
 }

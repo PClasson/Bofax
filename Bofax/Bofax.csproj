@@ -18,7 +18,6 @@
     <PackageReference Include="Reshiru.Blazor.IndexedDB.Framework" Version="1.0.1" />
     <PackageReference Include="TG.Blazor.IndexedDB" Version="1.5.0-preview" />
     <PackageReference Include="BlazorAnimate" Version="2.0.0" />
-    <PackageReference Include="RazorEngine.NetCore" Version="3.1.0" />
   </ItemGroup>
 
   <ItemGroup>

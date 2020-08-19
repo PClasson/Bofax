@@ -7,9 +7,9 @@
     <div class="main-layout">
         <div class="mat-layout-grid-inner">
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8">
-                @if(customers != null) {
+                @if(_customers != null) {
                     <MatList>
-                        @foreach(var customer in customers)
+                        @foreach(var customer in _customers)
                         {
                             <MatListItem Href="@Url.ToAbsoluteUri("Invoice/" + @customer.Id).AbsoluteUri">
                                 <div class="list-row">
@@ -40,74 +40,79 @@
 </Animate>
 
 
-<MatDialog @bind-IsOpen="@dialogIsOpen">
+<MatDialog @bind-IsOpen="@_dialogIsOpen">
     <MatDialogTitle>Lägg till kund</MatDialogTitle>
     <MatDialogContent>
             <p>
-                <MatTextField @bind-Value="@customerName" Label="Namn"></MatTextField>
+                <MatTextField @bind-Value="@_customerName" Label="Namn"></MatTextField>
             </p>
             <p>
-                <MatTextField @bind-Value="@customerAdress" Label="Address"></MatTextField>
+                <MatTextField @bind-Value="@_customerAdress" Label="Address"></MatTextField>
             </p>
             <p>
-                <MatTextField @bind-Value="@customerZipCode" Label="Postnummer"></MatTextField>
+                <MatTextField @bind-Value="@_customerZipCode" Label="Postnummer"></MatTextField>
             </p>
             <p>
-                <MatTextField @bind-Value="@customerCity" Label="Stad"></MatTextField>
+                <MatTextField @bind-Value="@_customerCity" Label="Stad"></MatTextField>
             </p>
             <p>
-                <MatTextField @bind-Value="@customerPhone" Label="Telefonnummer"></MatTextField>
+                <MatTextField @bind-Value="@_customerPhone" Label="Telefonnummer"></MatTextField>
             </p>           
     </MatDialogContent>
     <MatDialogActions>
-        <MatButton OnClick="@(e => { dialogIsOpen = false; })">Avbryt</MatButton>
-        <MatButton OnClick="@OkClick">Lägg till kund</MatButton>
+        <MatButton OnClick="@(e => { _dialogIsOpen = false; })">Avbryt</MatButton>
+        <MatButton OnClick="@AddCustomer">Lägg till kund</MatButton>
     </MatDialogActions>
 </MatDialog>
 
 @code {
-    List<Customer> customers;
+    List<Customer> _customers;
 
     //Form binds
-    string customerName;
-    string customerAdress;
-    string customerZipCode;
-    string customerCity;
-    string customerPhone;
-    bool dialogIsOpen = false;
+    string _customerName;
+    string _customerAdress;
+    string _customerZipCode;
+    string _customerCity;
+    string _customerPhone;
+    bool _dialogIsOpen = false;
 
     protected override async Task OnInitializedAsync()
     {
+        _customers = await GetCustomers();
+    }
+
+    async Task<List<Customer>> GetCustomers()
+    {
         using var db = await DbFactory.Create<BofaxDb>();
-        customers = db.Customers.ToList();
+        return db.Customers.ToList();
     }
 
     void OpenDialog()
     {
-        customerName = null;
-        customerAdress = null;
-        customerZipCode = null;
-        customerCity = null;
-        customerPhone = null;
+        _customerName = null;
+        _customerAdress = null;
+        _customerZipCode = null;
+        _customerCity = null;
+        _customerPhone = null;
 
-        dialogIsOpen = true;
+        _dialogIsOpen = true;
     }
 
-    void OkClick()
+    void AddCustomer()
     {
-        AddCustomer();
-        dialogIsOpen = false;
+        CreateAndAddCustomer();
+        _dialogIsOpen = false;
     }
 
-    async void AddCustomer()
+    async void CreateAndAddCustomer()
     {
         var customer = new Customer()
         {
-            Name = customerName,
-            Adress = customerAdress,
-            ZipCode = customerZipCode,
-            City = customerCity,
-            Phone = customerPhone
+            Name = _customerName,
+            Adress = _customerAdress,
+            ZipCode = _customerZipCode,
+            City = _customerCity,
+            Phone = _customerPhone
         };
 
         try
@@ -115,7 +120,7 @@
             using var db = await DbFactory.Create<BofaxDb>();
             db.Customers.Add(customer);
             await db.SaveChanges();
-            customers = db.Customers.ToList();
+            _customers = await GetCustomers();
             Toaster.Add("Kund tillagd!", MatToastType.Success);
         }
         catch (Exception ex)
