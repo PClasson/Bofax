@@ -68,18 +68,18 @@
                         <tr>
                             <td class="title">
                                 <span style="width:100%; max-width:300px;font-size: 22pt; font-weight:bold">
-                                    Fastigheten Järnspettet 6
+                                    @Model.Sender.InvoiceTitle
                                 </span>
                                 <br />
                                 <span style="margin-top: 5px;">
-                                    <i>Garage, lokaler, förråd</i>
+                                    <i>@Model.Sender.InvoiceSubTitle</i>
                                 </span>
                             </td>
                             <td align="right">5
-                                Namn Namnsson
-                                <br> Gatan 3
-                                <br> Post Nr Postort
-                                <br> Tel-nummer
+                                @Model.Sender.Name
+                                <br> @Model.Sender.Adress
+                                <br> @Model.Sender.ZipCode @Model.Sender.City
+                                <br> @Model.Sender.Phone
                             </td>
                         </tr>
                     </table>
@@ -204,7 +204,7 @@
 @code{
     public InvoiceModel Model;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         Model = PrintSettings.Model;
     }
