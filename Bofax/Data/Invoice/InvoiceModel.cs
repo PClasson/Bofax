@@ -19,7 +19,13 @@ namespace Bofax.Data.Invoice
         public int Quantity { get; set; }
         public string Description { get; set; }
         public decimal UnitPrice { get; set; }
-        public decimal Amount { get; set; }
+        public decimal CalculatedPrice
+        {
+            get
+            {
+                return UnitPrice * Quantity;
+            }
+        }
     }
 
     public enum Month

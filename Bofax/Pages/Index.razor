@@ -6,6 +6,9 @@
 <Animate Animation="Animations.SlideRight" Duration="TimeSpan.FromSeconds(0.5)">
     <div class="main-layout">
         <div class="mat-layout-grid-inner">
+            <MatButton Icon="add" OnClick="@OpenAddSenderInformationDialog" Label="Lägg avsändarinformation"></MatButton>
+        </div>
+        <div class="mat-layout-grid-inner">
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-8">
                 @if(_customers != null) {
                     <MatList>
@@ -22,15 +25,12 @@
                                     <div class="list-cell">
                                         @customer.Phone
                                     </div>
-                                    <div class="list-cell list-action">
-                                        <MatIconButton Href="https://www.google.se/" Icon="edit"></MatIconButton>
-                                    </div>
                                 </div>
                             </MatListItem>
                             <MatDivider></MatDivider>
                         }
                         <MatListItem>
-                            <MatButton Icon="add" OnClick="@OpenDialog" Label="Lägg till kund"></MatButton>
+                            <MatButton Icon="add" OnClick="@OpenAddCustomerDialog" Label="Lägg till kund"></MatButton>
                         </MatListItem>
                     </MatList>
                 }
@@ -39,8 +39,7 @@
     </div>
 </Animate>
 
-
-<MatDialog @bind-IsOpen="@_dialogIsOpen">
+<MatDialog @bind-IsOpen="@_addCustomerDialogIsOpen">
     <MatDialogTitle>Lägg till kund</MatDialogTitle>
     <MatDialogContent>
             <p>
@@ -60,34 +59,169 @@
             </p>           
     </MatDialogContent>
     <MatDialogActions>
-        <MatButton OnClick="@(e => { _dialogIsOpen = false; })">Avbryt</MatButton>
+        <MatButton OnClick="@(e => { _addCustomerDialogIsOpen = false; })">Avbryt</MatButton>
         <MatButton OnClick="@AddCustomer">Lägg till kund</MatButton>
+    </MatDialogActions>
+</MatDialog>
+
+<MatDialog @bind-IsOpen="@_addSenederInformationDialogIsOpen">
+    <MatDialogTitle>Lägg till Avsändarinformation</MatDialogTitle>
+    <MatDialogContent>
+            <p>
+                <MatTextField @bind-Value="@_senderName" Label="Namn"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_senderAdress" Label="Address"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_senderZipCode" Label="Postnummer"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_senderCity" Label="Stad"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_senderPhone" Label="Telefonnummer"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_senderPaymentAccount" Label="Bankgiro"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_senderInvoiceTitle" Label="Fakturatitel"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_senderInvoiceSubtitle" Label="Faktura underrubrik"></MatTextField>
+            </p>
+    </MatDialogContent>
+    <MatDialogActions>
+        <MatButton OnClick="@(e => { _addSenederInformationDialogIsOpen = false; })">Avbryt</MatButton>
+        <MatButton OnClick="@AddSenderInformation">Lägg till avsändarinformation</MatButton>
     </MatDialogActions>
 </MatDialog>
 
 @code {
     List<Customer> _customers;
+    Sender _sender;
 
-    //Form binds
+    //Form binds customer
     string _customerName;
     string _customerAdress;
     string _customerZipCode;
     string _customerCity;
     string _customerPhone;
-    bool _dialogIsOpen = false;
+    bool _addCustomerDialogIsOpen = false;
+
+    //Form binds sender
+    string _senderName;
+    string _senderAdress;
+    string _senderZipCode;
+    string _senderCity;
+    string _senderPhone;
+    string _senderPaymentAccount;
+    string _senderInvoiceTitle;
+    string _senderInvoiceSubtitle;
+    bool _addSenederInformationDialogIsOpen = false;
 
     protected override async Task OnInitializedAsync()
     {
         _customers = await GetCustomers();
+        _sender = await GetSender();
     }
 
     async Task<List<Customer>> GetCustomers()
     {
-        using var db = await DbFactory.Create<BofaxDb>();
-        return db.Customers.ToList();
+        try 
+        {
+            using var db = await DbFactory.Create<BofaxDb>();
+            return db.Customers.ToList();
+        }
+        catch (Exception ex) 
+        {
+            Toaster.Add("Fel inträffade när kundregistret skulle läsas in!", MatToastType.Danger, ex.Message);
+            Console.WriteLine("Exception caught in GetCustomers");
+            return new List<Customer>();
+        }
     }
 
-    void OpenDialog()
+        async Task<Sender> GetSender()
+    {
+        try 
+        {
+            using var db = await DbFactory.Create<BofaxDb>();
+            return db.Senders.FirstOrDefault();
+        }
+        catch (Exception ex) 
+        {
+            Toaster.Add("Fel inträffade när avsändarinformation skulle läsas in!", MatToastType.Danger, ex.Message);
+            Console.WriteLine("Exception caught in GetSender");
+            return new Sender();
+        }
+    }
+
+    void OpenAddSenderInformationDialog() 
+    {
+        _addSenederInformationDialogIsOpen = true;
+
+        if(_sender != null) 
+        {
+            _senderName = _sender.Name;
+            _senderAdress = _sender.Adress;
+            _senderZipCode = _sender.ZipCode;
+            _senderCity = _sender.City;
+            _senderPhone = _sender.Phone;
+            _senderPaymentAccount = _sender.PaymentAccount;
+            _senderInvoiceTitle = _sender.InvoiceTitle;
+            _senderInvoiceSubtitle = _sender.InvoiceSubTitle;
+        }
+    }
+
+    async void AddSenderInformation() 
+    {
+        try
+        {
+            using var db = await DbFactory.Create<BofaxDb>();
+            var sender = db.Senders.FirstOrDefault();
+
+            if(sender != null)
+            {
+                sender.Name = _senderName;
+                sender.Adress = _senderAdress;
+                sender.ZipCode = _senderZipCode;
+                sender.City = _senderCity;
+                sender.Phone = _senderPhone;
+                sender.PaymentAccount = _senderPaymentAccount;
+                sender.InvoiceTitle = _senderInvoiceTitle;
+                sender.InvoiceSubTitle = _senderInvoiceSubtitle;
+            }
+            else
+            {
+                sender = new Sender() 
+                {
+                    Name = _senderName,
+                    Adress = _senderAdress,
+                    ZipCode = _senderZipCode,
+                    City = _senderCity,
+                    Phone = _senderPhone,
+                    PaymentAccount = _senderPaymentAccount,
+                    InvoiceTitle = _senderInvoiceTitle,
+                    InvoiceSubTitle = _senderInvoiceSubtitle
+                };
+
+                db.Senders.Add(sender);
+            }
+
+            await db.SaveChanges();
+            _addSenederInformationDialogIsOpen = false;
+            Toaster.Add("Avsändarinformation tillagd!", MatToastType.Success);
+            this.StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Toaster.Add("Fel inträffade när avsändarinformation skulle läggas till!", MatToastType.Danger, ex.Message);
+            Console.WriteLine("Exception caught in AddSenderInformation");
+        }
+    }
+
+    void OpenAddCustomerDialog()
     {
         _customerName = null;
         _customerAdress = null;
@@ -95,13 +229,13 @@
         _customerCity = null;
         _customerPhone = null;
 
-        _dialogIsOpen = true;
+        _addCustomerDialogIsOpen = true;
     }
 
     void AddCustomer()
     {
         CreateAndAddCustomer();
-        _dialogIsOpen = false;
+        _addCustomerDialogIsOpen = false;
     }
 
     async void CreateAndAddCustomer()

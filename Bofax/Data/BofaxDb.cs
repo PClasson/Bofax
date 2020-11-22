@@ -33,6 +33,7 @@ namespace Bofax.Data
         public string ZipCode { get; set; }
         public string City { get; set; }
         public string Phone { get; set; }
+        public string PaymentAccount { get; set; }
         public string InvoiceTitle { get; set; }
         public string InvoiceSubTitle { get; set; }
     }
@@ -44,12 +45,11 @@ namespace Bofax.Data
         public int Quantity { get; set; }
         public string Description { get; set; }
         public decimal UnitPrice { get; set; }
-        public decimal Amount { get; set; }
         public decimal CalculatedPrice
         {
             get
             {
-                return UnitPrice * Amount;
+                return UnitPrice * Quantity;
             }
         }
 

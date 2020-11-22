@@ -2,6 +2,7 @@
 @layout PrintLayout
 @inject IJSRuntime JSRuntime
 @inject PrintSettings PrintSettings
+
 @implements IDisposable
 
 <style>
@@ -59,7 +60,7 @@
             }
 </style>
 
-<section class="sheet padding-10mm">
+<section id="print-paper" class="sheet padding-10mm">
     <div class="invoice-box">
         <table cellpadding="0" cellspacing="0">
             <tr class="top">
@@ -75,7 +76,7 @@
                                     <i>@Model.Sender.InvoiceSubTitle</i>
                                 </span>
                             </td>
-                            <td align="right">5
+                            <td align="right">
                                 @Model.Sender.Name
                                 <br> @Model.Sender.Adress
                                 <br> @Model.Sender.ZipCode @Model.Sender.City
@@ -145,7 +146,7 @@
                         @item.UnitPrice kr
                     </td>
                     <td align="right">
-                        @item.Amount kr
+                        @item.CalculatedPrice kr
                     </td>
                 </tr>
             }
@@ -171,7 +172,7 @@
                                     </tr>
                                     <tr>
                                         <td>
-                                            Bankgiro: 974-3022
+                                            Bankgiro: @Model.Sender.PaymentAccount
                                         </td>
                                     </tr>
                                     <tr>

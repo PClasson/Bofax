@@ -13,7 +13,7 @@
                     <p>@_customer.Name</p>
                     <p>@_customer.Adress, @_customer.ZipCode @_customer.City</p>
                     <p>@_customer.Phone</p>
-                    <p><MatButton OnClick="@RenderPDF" Label="Skapa Faktura"></MatButton></p>
+                    <p><MatButton OnClick="@OpenEditCustomerDialog" Label="Redigera kund"></MatButton></p>
                 }
             </div>
             <div class="mat-layout-grid-cell mat-layout-grid-cell-span-6">
@@ -52,13 +52,13 @@
                             <MatListItem>
                                 <div class="list-row">
                                     <div class="list-cell list-cell-amount">
-                                        @invoiceRow.Amount
+                                        @invoiceRow.Quantity
                                     </div>
                                     <div class="list-cell list-cell-description">
                                         @invoiceRow.Description
                                     </div>
                                     <div class="list-cell list-cell-unitprice">
-                                        @invoiceRow.UnitPrice, @invoiceRow.CalculatedPrice
+                                        @invoiceRow.UnitPrice kr
                                     </div>
                                     <div class="list-cell list-action">
                                         <MatIconButton OnClick="@(() => DeleteInvoiceRow(invoiceRow))" Icon="delete"></MatIconButton>
@@ -71,7 +71,7 @@
                     <MatListItem>
                         <div class="list-row">
                             <div class="list-cell list-cell-amount">
-                                <MatTextField @bind-Value="@_invoiceRowAmount" Label="Antal" FullWidth="true"></MatTextField>
+                                <MatTextField @bind-Value="@_invoiceRowQuantity" Label="Antal" FullWidth="true"></MatTextField>
                             </div>
                             <div class="list-cell list-cell-description">
                                 <MatTextField @bind-Value="@_invoiceRowDescription" Label="Beskrivning" FullWidth="true"></MatTextField>
@@ -84,22 +84,51 @@
                             </div>
                         </div>
                     </MatListItem>
+                    <MatListItem>
+                        <div class="list-row">
+                            <div class="list-cell list-cell-amount">
+                                
+                            </div>
+                            <div class="list-cell list-cell-description">
+
+                            </div>
+                            <div class="list-cell list-cell-unitprice">
+                                Total: @_calculatedSum kr
+                            </div>
+                            <div class="list-cell list-action">
+                                <MatIconButton OnClick="@RenderPDF" Icon="print"></MatIconButton>
+                            </div>
+                        </div>
+                    </MatListItem>
                 </MatList>
             </div>
         </div>
     </div>
 </Animate>
 
+
 <MatDialog @bind-IsOpen="@_dialogIsOpen">
-    <MatDialogTitle>Faktura</MatDialogTitle>
+    <MatDialogTitle>Redigera kund</MatDialogTitle>
     <MatDialogContent>
-        <p>
-            Rendered PDF
-        </p>
+            <p>
+                <MatTextField @bind-Value="@_customerName" Label="Namn"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_customerAdress" Label="Address"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_customerZipCode" Label="Postnummer"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_customerCity" Label="Stad"></MatTextField>
+            </p>
+            <p>
+                <MatTextField @bind-Value="@_customerPhone" Label="Telefonnummer"></MatTextField>
+            </p>           
     </MatDialogContent>
     <MatDialogActions>
         <MatButton OnClick="@(e => { _dialogIsOpen = false; })">Avbryt</MatButton>
-        <MatButton>Spara PDF</MatButton>
+        <MatButton OnClick="@EditCustomer">Redigera kund</MatButton>
     </MatDialogActions>
 </MatDialog>
 
@@ -108,15 +137,22 @@
     [Parameter]
     public string CustomerId { get; set; }
 
+     //Form binds
+    string _customerName;
+    string _customerAdress;
+    string _customerZipCode;
+    string _customerCity;
+    string _customerPhone;
     bool _dialogIsOpen = false;
 
     Customer _customer;
     Month _invoiceMonth = 0;
-    DateTime? _invoiceDate = DateTime.Today;
-    DateTime? _expirationDate = DateTime.Now.AddDays(-10);
+    DateTime _invoiceDate = DateTime.Today;
+    DateTime _expirationDate = DateTime.Now.AddDays(-10);
     List<InvoiceRow> _invoiceRows;
+    decimal _calculatedSum;
 
-    string _invoiceRowAmount;
+    string _invoiceRowQuantity;
     string _invoiceRowDescription;
     string _invoiceRowUnitPrice;
 
@@ -128,7 +164,63 @@
         var customerId = Convert.ToInt64(CustomerId);
         _customer = db.Customers.Single(c => c.Id == customerId);
         _invoiceRows = await GetInvoiceRowsForCustomer(_customer.Id);
+        _calculatedSum = CalculateSum();
         SetDates();
+    }
+
+    async Task<Sender> GetSenderInformation() 
+    {
+        try 
+        {
+            using var db = await DbFactory.Create<BofaxDb>();
+            var sender = db.Senders.FirstOrDefault();
+            if(sender == null) 
+            {
+                throw new Exception("Kunde inte läsa in avsändarinformationen!");
+            }
+            return sender;
+        }
+        catch (Exception ex) 
+        {
+            Toaster.Add("Fel inträffade när avsändarinformation skulle läsas in!", MatToastType.Danger, ex.Message);
+            Console.WriteLine("Exception caught in GetSenderInformation");
+            return null;
+        }
+    }
+
+    void OpenEditCustomerDialog() 
+    {
+        _customerName = _customer.Name;
+        _customerAdress = _customer.Adress;
+        _customerZipCode = _customer.ZipCode;
+        _customerCity = _customer.City;
+        _customerPhone = _customer.Phone;
+        _dialogIsOpen = true;
+    }
+
+    async void EditCustomer() 
+    {
+        try
+        {
+            using var db = await DbFactory.Create<BofaxDb>();
+            var customer = db.Customers.Single(x => x.Id == _customer.Id);
+
+            customer.Name = _customerName;
+            customer.Adress = _customerAdress;
+            customer.ZipCode = _customerZipCode;
+            customer.City = _customerCity;
+            customer.Phone = _customerPhone;
+            await db.SaveChanges();
+            _customer = customer;
+            _dialogIsOpen = false;
+            Toaster.Add("Kund redigerad!", MatToastType.Success);
+            this.StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Toaster.Add("Fel inträffade när kund skulle redigeras!", MatToastType.Danger, ex.Message);
+            Console.WriteLine("Exception caught in EditCustomer");
+        }
     }
 
     void SetDates()
@@ -160,7 +252,7 @@
     void AddInvoiceRow()
     {
         CreateAndAddInvoiceRow();
-        _invoiceRowAmount = null;
+        _invoiceRowQuantity = null;
         _invoiceRowDescription = null;
         _invoiceRowUnitPrice = null;
     }
@@ -170,7 +262,7 @@
         var invoiceRow = new InvoiceRow()
         {
             CustomerId = _customer.Id,
-            Amount = Convert.ToDecimal(_invoiceRowAmount),
+            Quantity = Convert.ToInt32(_invoiceRowQuantity),
             Description = _invoiceRowDescription,
             UnitPrice = Convert.ToDecimal(_invoiceRowUnitPrice)
         };
@@ -181,7 +273,8 @@
             db.InvoiceRows.Add(invoiceRow);
             await db.SaveChanges();
             _invoiceRows = await GetInvoiceRowsForCustomer(_customer.Id);
-            Toaster.Add("Fakturarad tillagd!", MatToastType.Success);
+            _calculatedSum = CalculateSum();
+            Toaster.Add("Fakturarad tillagd!", MatToastType.Success);            
             this.StateHasChanged();
         }
         catch (Exception ex)
@@ -199,6 +292,7 @@
             db.InvoiceRows.Remove(invoiceRow);
             await db.SaveChanges();
             _invoiceRows = await GetInvoiceRowsForCustomer(_customer.Id);
+            _calculatedSum = CalculateSum();
             Toaster.Add("Fakturarad borttagen!", MatToastType.Success);
             this.StateHasChanged();
         }
@@ -209,26 +303,36 @@
         }
     }
 
-    void RenderPDF()
+    async void RenderPDF()
     {
-        Console.WriteLine("Rendering PDF");
-        var sum = CalculateSum(_invoiceRows);
-
-        var invoiceModel = new InvoiceModel
+        try 
         {
-            Customer = _customer,
-            Month = _invoiceMonth.ToString(),
-            CreateDate = _invoiceDate.ToString(),
-            DueDate = _expirationDate.ToString(),
-            Rows = ConvertToInvoiceRowModel(_invoiceRows),
-            Sum = sum,
-            AmountToPay = sum
-        };
+            Console.WriteLine("Rendering PDF");
+            var sum = CalculateSum();
+            var sender = await GetSenderInformation();
 
-        PrintSettings.Model = invoiceModel;
+            var invoiceModel = new InvoiceModel
+            {
+                Customer = _customer,
+                Month = _invoiceMonth.ToString(),
+                CreateDate = _invoiceDate.ToString("yyyy-MM-dd"),
+                DueDate = _expirationDate.ToString("yyyy-MM-dd"),
+                Rows = ConvertToInvoiceRowModel(_invoiceRows),
+                Sum = sum,
+                AmountToPay = sum,
+                Sender = sender
+            };
 
-        Console.WriteLine("Navigating!");
-        navMgr.NavigateTo($"/Print");
+            PrintSettings.Model = invoiceModel;
+
+            Console.WriteLine("Navigating!");
+            navMgr.NavigateTo($"/Print");
+        }
+        catch (Exception ex) 
+        {
+            Toaster.Add("Fel inträffade när faktura skulle genereras!", MatToastType.Danger, ex.Message);
+            Console.WriteLine("Exception caught in RenderPDF");
+        }
     }
 
     List<InvoiceRowModel> ConvertToInvoiceRowModel(List<InvoiceRow> invoiceRows)
@@ -241,19 +345,18 @@
             {
                 Quantity = invoiceRow.Quantity,
                 Description = invoiceRow.Description,
-                UnitPrice = invoiceRow.UnitPrice,
-                Amount = invoiceRow.Amount
+                UnitPrice = invoiceRow.UnitPrice
             });
         });
 
         return convertedRows;
     }
 
-    decimal CalculateSum(List<InvoiceRow> invoiceRows)
+    decimal CalculateSum()
     {
         decimal sum = 0;
 
-        invoiceRows.ForEach(invoiceRow =>
+        _invoiceRows.ForEach(invoiceRow =>
         {
             sum += invoiceRow.CalculatedPrice;
         });
